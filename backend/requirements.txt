@@ -1,0 +1,15 @@
+fastapi>=0.95.0
+uvicorn[standard]>=0.21.0
+SQLAlchemy>=1.4.0
+asyncpg>=0.26.0
+redis>=4.6.0
+httpx>=0.24.0
+pydantic>=1.10.0
+pytest>=7.0.0
+pytest-asyncio>=0.20.0
+pytest-cov>=3.0.0
+alembic>=1.10.0
+# Optional heavy ML dependencies (install only if you need local transformer models)
+# transformers>=4.0.0
+# torch>=1.13.0
+

@@ -1,0 +1,6 @@
+redis
+psycopg2-binary
+ 
+# Optional ML extras (install with `pip install -r requirements-ml.txt`):
+# transformers>=4.0.0
+# torch>=1.13.0
