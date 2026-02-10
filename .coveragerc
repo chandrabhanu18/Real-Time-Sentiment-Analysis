@@ -1,0 +1,3 @@
+[run]
+omit =
+    backend/ws_smoke_test.py

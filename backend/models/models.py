@@ -9,7 +9,7 @@ from sqlalchemy import (
     JSON,
     Index,
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
 Base = declarative_base()
@@ -54,7 +54,7 @@ class SentimentAlert(Base):
 
 
 # Indexes for frequently queried columns
-Index("idx_social_created_at", SocialMediaPost.ingested_at)
+Index("idx_social_created_at", SocialMediaPost.created_at)
 Index("idx_sentiment_analyzed_at", SentimentAnalysis.analyzed_at)
 Index("idx_alerts_triggered_at", SentimentAlert.triggered_at)
 

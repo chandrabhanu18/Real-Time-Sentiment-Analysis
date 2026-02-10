@@ -1,2 +1,2 @@
-﻿redis
-faker
+﻿redis>=4.6.0
+faker>=19.0.0

@@ -40,7 +40,10 @@ class AlertService:
                     "threshold": self.threshold,
                     "actual_ratio": ratio,
                     "window_minutes": self.window_minutes,
+                    "window_start": window_start.isoformat(),
+                    "window_end": now.isoformat(),
                     "metrics": {"positive_count": pos, "negative_count": neg, "neutral_count": neu, "total_count": total},
+                    "post_count": total,
                     "timestamp": now.isoformat(),
                 }
                 return alert
@@ -53,9 +56,9 @@ class AlertService:
                 alert_type=alert_data.get("alert_type"),
                 threshold_value=alert_data.get("threshold"),
                 actual_value=alert_data.get("actual_ratio"),
-                window_start=alert_data.get("window_start"),
-                window_end=alert_data.get("window_end"),
-                post_count=alert_data.get("metrics", {}).get("total_count", 0),
+                window_start=_parse_dt(alert_data.get("window_start")),
+                window_end=_parse_dt(alert_data.get("window_end")),
+                post_count=alert_data.get("post_count") or alert_data.get("metrics", {}).get("total_count", 0),
                 details=alert_data,
             )
             db.add(a)
@@ -68,12 +71,19 @@ class AlertService:
             try:
                 alert = await self.check_thresholds()
                 if alert:
-                    # annotate window times
-                    now = datetime.utcnow()
-                    alert["window_start"] = (now - timedelta(minutes=self.window_minutes)).isoformat()
-                    alert["window_end"] = now.isoformat()
                     await self.save_alert(alert)
                     print("ALERT TRIGGERED:", alert, flush=True)
             except Exception as e:
                 print("Error in alerting loop:", e, flush=True)
             await asyncio.sleep(check_interval_seconds)
+
+
+def _parse_dt(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return None

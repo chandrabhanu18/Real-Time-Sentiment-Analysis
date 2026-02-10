@@ -1,6 +1,8 @@
-redis
-psycopg2-binary
- 
-# Optional ML extras (install with `pip install -r requirements-ml.txt`):
-# transformers>=4.0.0
-# torch>=1.13.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+redis>=4.6.0
+SQLAlchemy>=1.4.0
+asyncpg>=0.26.0
+httpx>=0.24.0
+transformers==4.40.2
+torch==2.2.2+cpu

@@ -1,0 +1,6 @@
+[run]
+source =
+    backend
+omit =
+    */ws_smoke_test.py
+    */backend/tests/*

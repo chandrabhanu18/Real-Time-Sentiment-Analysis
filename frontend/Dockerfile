@@ -1,3 +1,11 @@
-FROM nginx:alpine
-COPY index.html /usr/share/nginx/html/index.html
-COPY chart.min.js /usr/share/nginx/html/chart.min.js
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
