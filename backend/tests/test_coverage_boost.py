@@ -7,7 +7,13 @@ import pytest
 
 from backend import database
 from backend import main
-from backend.main import ConnectionManager, _cache_distribution_payload, _metrics_broadcaster, _redis_pubsub_forward
+from backend.main import (
+    ConnectionManager,
+    _cache_aggregate_payload,
+    _cache_distribution_payload,
+    _metrics_broadcaster,
+    _redis_pubsub_forward,
+)
 from backend.models.models import SocialMediaPost, SentimentAnalysis
 from backend.services.alerting import AlertService
 from backend.services.sentiment_analyzer import SentimentAnalyzer
@@ -1377,6 +1383,92 @@ async def test_cache_distribution_payload_exception():
 
     main.redis_client = CacheRedis()
     await _cache_distribution_payload("cache-key", {"ok": True})
+    main.redis_client = None
+
+
+@pytest.mark.asyncio
+async def test_aggregate_cache_hit(db_session, monkeypatch):
+    cached_payload = {
+        "period": "hour",
+        "start_date": "2025-01-01T00:00:00",
+        "end_date": "2025-01-02T00:00:00",
+        "data": [],
+        "summary": {"total_posts": 0, "positive_total": 0, "negative_total": 0, "neutral_total": 0},
+        "cached": False,
+        "cached_at": "2025-01-02T00:00:00",
+    }
+
+    class CacheRedis:
+        async def get(self, _key):
+            return json.dumps(cached_payload)
+
+    monkeypatch.setattr(main, "redis_client", CacheRedis())
+    payload = await main.sentiment_aggregate(
+        period="hour",
+        start_date=datetime.datetime(2025, 1, 1),
+        end_date=datetime.datetime(2025, 1, 2),
+        source=None,
+        db=db_session,
+    )
+    assert payload["cached"] is True
+    monkeypatch.setattr(main, "redis_client", None)
+
+
+@pytest.mark.asyncio
+async def test_aggregate_cache_set_success(db_session):
+    class CacheRedis:
+        def __init__(self):
+            self.set_called = False
+
+        async def get(self, _key):
+            return None
+
+        async def set(self, _key, _value, ex=None):
+            self.set_called = True
+
+    cache = CacheRedis()
+    main.redis_client = cache
+    payload = await main.sentiment_aggregate(
+        period="minute",
+        start_date=datetime.datetime.utcnow() - datetime.timedelta(minutes=1),
+        end_date=datetime.datetime.utcnow(),
+        source=None,
+        db=db_session,
+    )
+    assert payload["cached"] is False
+    assert cache.set_called is True
+    main.redis_client = None
+
+
+@pytest.mark.asyncio
+async def test_aggregate_cache_read_exception(db_session):
+    class CacheRedis:
+        async def get(self, _key):
+            raise RuntimeError("cache read error")
+
+        async def set(self, _key, _value, ex=None):
+            return None
+
+    main.redis_client = CacheRedis()
+    payload = await main.sentiment_aggregate(
+        period="hour",
+        start_date=datetime.datetime.utcnow() - datetime.timedelta(hours=1),
+        end_date=datetime.datetime.utcnow(),
+        source=None,
+        db=db_session,
+    )
+    assert payload["cached"] is False
+    main.redis_client = None
+
+
+@pytest.mark.asyncio
+async def test_cache_aggregate_payload_exception():
+    class CacheRedis:
+        async def set(self, _key, _value, ex=None):
+            raise RuntimeError("cache fail")
+
+    main.redis_client = CacheRedis()
+    await _cache_aggregate_payload("cache-key", {"ok": True})
     main.redis_client = None
 
 

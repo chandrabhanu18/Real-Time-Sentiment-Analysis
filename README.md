@@ -27,7 +27,7 @@ See ARCHITECTURE.md for the system diagram, data flow, and service responsibilit
 ```bash
 # Clone repository
 git clone <repo-url>
-cd sentiment-platform
+cd Real-Time-Sentiment-Analysis
 
 # Copy environment template
 cp .env.example .env

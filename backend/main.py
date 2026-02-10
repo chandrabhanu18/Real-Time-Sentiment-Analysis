@@ -383,6 +383,20 @@ async def sentiment_aggregate(
     if start_date is None:
         start_date = end_date - datetime.timedelta(hours=24)
 
+    cache_key = (
+        f"{REDIS_CACHE_PREFIX}:aggregate:{period}:"
+        f"{start_date.isoformat()}:{end_date.isoformat()}:{source or 'all'}"
+    )
+    if redis_client is not None:
+        try:
+            cached = await redis_client.get(cache_key)
+            if cached:
+                data = json.loads(cached)
+                data["cached"] = True
+                return data
+        except Exception:
+            pass
+
     stmt = (
         select(SentimentAnalysis)
         .where(SentimentAnalysis.analyzed_at >= start_date)
@@ -433,7 +447,7 @@ async def sentiment_aggregate(
             }
         )
 
-    return {
+    payload = {
         "period": period,
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
@@ -444,7 +458,22 @@ async def sentiment_aggregate(
             "negative_total": sum(d["negative_count"] for d in data),
             "neutral_total": sum(d["neutral_count"] for d in data),
         },
+        "cached": False,
+        "cached_at": datetime.datetime.utcnow().isoformat(),
     }
+
+    await _cache_aggregate_payload(cache_key, payload)
+
+    return payload
+
+
+async def _cache_aggregate_payload(cache_key: str, payload: dict) -> None:
+    if redis_client is None:
+        return
+    try:
+        await redis_client.set(cache_key, json.dumps(payload), ex=60)
+    except Exception:
+        return
 
 
 async def _collect_metrics(db: AsyncSession) -> dict:
